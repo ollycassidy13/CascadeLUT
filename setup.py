@@ -1,6 +1,6 @@
-#  This file is part of NeuraLUT.
-#  
-#  NeuraLUT is a derivative work based on LogicNets,
+#  This file is part of CascadeLUT.
+#
+#  CascadeLUT is a derivative work based on LogicNets,
 #  which is licensed under the Apache License 2.0.
 
 #  Copyright (C) 2021 Xilinx, Inc
@@ -23,7 +23,7 @@
 
 # -*- coding: utf-8 -*-
 """
-    Setup file for neuralut.
+    Setup file for cascadelut.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 3.2.3.
@@ -43,6 +43,6 @@ except VersionConflict:
 
 
 if __name__ == "__main__":
-    setup(name = "neuralut",
+    setup(name = "cascadelut",
 
     version = "1.0.0")

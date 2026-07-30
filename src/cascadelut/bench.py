@@ -47,3 +47,37 @@ def sort_to_bench(input_state_space_bin_str, bin_output_states):
     zipped_io_states.sort(key=lambda x: x[0], reverse=True)
     sorted_bin_output_states = list(map(lambda x: x[1], zipped_io_states))
     return sorted_bin_output_states
+
+def cascade_gen_neuron_bench(self, index, module_name):
+    (indices, input_perm_matrix, float_output_states, bin_output_states) = \
+        self.neuron_truth_tables[index]
+    composite = self.input_quant
+    _, output_bitwidth = self.output_quant.get_scale_factor_bits(self.cuda)
+    slot_bits = [composite.get_bits_for_feature(int(indices[j])) for j in range(len(indices))]
+    cat_input_bitwidth = sum(slot_bits)
+    input_state_space_bin_str = []
+    for row in input_perm_matrix:
+        row_strs = []
+        for idx in range(len(indices)):
+            row_strs.append(
+                composite.get_bin_str_for_slot(int(indices[idx]), row[idx], is_cuda=self.cuda)
+            )
+        input_state_space_bin_str.append(row_strs)
+    sorted_bin_output_states = sort_to_bench(input_state_space_bin_str, bin_output_states)
+    num_entries = input_perm_matrix.shape[0]
+    lut_string = ""
+    for i in range(int(output_bitwidth)):
+        lut_string += f"M1[{i}]       = LUT 0x"
+        output_bin_str = reduce(
+            lambda b, c: b + c,
+            map(
+                lambda a: self.output_quant.get_bin_str_from_int(a, is_cuda=self.cuda)[
+                    int(output_bitwidth) - 1 - i
+                ],
+                sorted_bin_output_states,
+            ),
+        )
+        lut_hex_string = f"{int(output_bin_str, 2):0{int(num_entries / 4)}x} "
+        lut_string += lut_hex_string
+        lut_string += generate_lut_input_string(int(cat_input_bitwidth))
+    return generate_lut_bench(int(cat_input_bitwidth), int(output_bitwidth), lut_string)
