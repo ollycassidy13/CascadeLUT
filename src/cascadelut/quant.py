@@ -232,20 +232,6 @@ def _generate_bin_permutation_matrix_multi(bin_state_spaces: list, cuda: bool) -
     return mat
 
 
-def generate_neuron_connection_verilog_composite(input_indices, composite_quant):
-    connection_string = ""
-    num_indices = len(input_indices)
-    for i in range(num_indices):
-        index = int(input_indices[i])
-        offset = composite_quant.get_bit_offset_for_feature(index)
-        bits = composite_quant.get_bits_for_feature(index)
-        for b in reversed(range(bits)):
-            connection_string += f"M0[{offset + b}]"
-            if not (i == num_indices - 1 and b == 0):
-                connection_string += ", "
-    return connection_string
-
-
 class LearnablePerFeatureMultiBitActivation(nn.Module):
     def __init__(
         self,
@@ -551,14 +537,14 @@ def cascade_calculate_truth_tables(self):
 
         for pattern, group_neurons in pattern_groups.items():
             float_ss_list = [c_ss if p == 1 else h_ss for p in pattern]
-            bin_ss_list   = [c_bs if p == 1 else h_bs for p in pattern]
+            bin_ss_list = [c_bs if p == 1 else h_bs for p in pattern]
 
             float_perm = _generate_permutation_matrix_multi(float_ss_list, self.cuda)
-            bin_perm   = _generate_bin_permutation_matrix_multi(bin_ss_list, self.cuda)
+            bin_perm = _generate_bin_permutation_matrix_multi(bin_ss_list, self.cuda)
 
             if self.cuda:
                 float_perm = float_perm.cuda()
-                bin_perm   = bin_perm.cuda()
+                bin_perm = bin_perm.cuda()
 
             float_out = self.output_quant(self.forward_to_fill_luts(float_perm))
             self.output_quant.bin_output()
@@ -584,9 +570,9 @@ def patch_cascade_layer(layer) -> None:
     if not isinstance(layer.input_quant, CascadeCompositeInputQuant):
         return
     layer.calculate_truth_tables = types.MethodType(cascade_calculate_truth_tables, layer)
-    layer.gen_layer_verilog       = types.MethodType(cascade_gen_layer_verilog,       layer)
-    layer.gen_neuron_verilog      = types.MethodType(cascade_gen_neuron_verilog,      layer)
-    layer.gen_neuron_bench        = types.MethodType(cascade_gen_neuron_bench,        layer)
+    layer.gen_layer_verilog = types.MethodType(cascade_gen_layer_verilog, layer)
+    layer.gen_neuron_verilog = types.MethodType(cascade_gen_neuron_verilog, layer)
+    layer.gen_neuron_bench = types.MethodType(cascade_gen_neuron_bench, layer)
 
 
 class ThresholdTemperatureScheduler:

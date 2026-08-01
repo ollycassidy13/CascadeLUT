@@ -37,7 +37,7 @@ python neq2lut.py --arch hdr-5l-0.1 \
                   --add-registers \
                   --device 1 \
                   --imask ./test_cascade_demo/imask_cascade.pth \
-                  --cuda
+                  --cuda \
 				  --hw-bandwidth 112
 ```
 
@@ -55,9 +55,9 @@ python neq2lut.py --arch hdr-5l-0.1 \
                   --add-registers \
                   --device 1 \
                   --imask ./test_cascade_demo/imask_cascade.pth \
-                  --cuda
-				  --hw-bandwidth 112
-				  --use_layer_q
+                  --cuda \
+				  --hw-bandwidth 112 \
+				  --use-layer-q
 ```
 
 > NOTE: The parameters set for training here are not the parameters used in the paper.

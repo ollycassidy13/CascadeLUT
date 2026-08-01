@@ -140,20 +140,20 @@ def module_list_to_verilog_module(
         f.write(reg_verilog)
     
     if cascade_config and cascade_config.get('enabled', False):
-        features_per_cycle  = cascade_config.get('features_per_cycle', 112)
-        cascade_chunks  = cascade_config.get('cascade_chunks')
-        cascade_layers  = cascade_config.get('cascade_layers')
+        features_per_cycle = cascade_config.get('features_per_cycle', 112)
+        cascade_chunks = cascade_config.get('cascade_chunks')
+        cascade_layers = cascade_config.get('cascade_layers')
 
         _, input_bw = module_list[0].input_quant.get_scale_factor_bits(module_list[0].cuda)
         chunk_bits = features_per_cycle * int(input_bw)
 
         cascade_top = generate_cascade_top_module(
-            top_name          = module_name,
+            top_name = module_name,
             layer_output_bits = layer_output_bits,
-            chunk_bits        = chunk_bits,
-            cascade_chunks    = cascade_chunks,
-            cascade_layers    = cascade_layers,
-            hw_bandwidth      = hw_bandwidth,
+            chunk_bits = chunk_bits,
+            cascade_chunks = cascade_chunks,
+            cascade_layers = cascade_layers,
+            hw_bandwidth = hw_bandwidth,
         )
         with open(f"{output_directory}/{module_name}.v", "w") as f:
             f.write(cascade_top)
@@ -611,10 +611,10 @@ class SparseLinearNeq(nn.Module):
                         continue
 
                     valid_float_ss = [input_state_space[0] for _ in range(eff_fan_in)]
-                    valid_bin_ss   = [bin_state_space[0]   for _ in range(eff_fan_in)]
+                    valid_bin_ss = [bin_state_space[0]   for _ in range(eff_fan_in)]
 
                     valid_float_perm = generate_permutation_matrix(valid_float_ss, self.cuda)
-                    valid_bin_perm   = generate_permutation_matrix(valid_bin_ss,   self.cuda)
+                    valid_bin_perm = generate_permutation_matrix(valid_bin_ss,   self.cuda)
                     n_perms = valid_float_perm.shape[0]
 
                     # disconnected slots stay 0; valid slots filled below
@@ -624,7 +624,7 @@ class SparseLinearNeq(nn.Module):
                         device=_layer_device,
                     )
                     valid_float_perm = valid_float_perm.to(_layer_device)
-                    valid_bin_perm   = valid_bin_perm.to(_layer_device)
+                    valid_bin_perm = valid_bin_perm.to(_layer_device)
                     for local_j, global_j in enumerate(valid_slots):
                         full_float_perm[:, global_j] = valid_float_perm[:, local_j]
 

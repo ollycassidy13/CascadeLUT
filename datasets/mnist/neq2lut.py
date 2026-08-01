@@ -80,14 +80,14 @@ def test_layer_q_lut_path(
     )
 
     correct = 0
-    total   = 0
+    total = 0
 
     with torch.no_grad():
         for x_uint8, y in test_loader_uint8:
-            x_q  = lut_sim(x_uint8)           # [B, total_bits] {0,1}
+            x_q = lut_sim(x_uint8)           # [B, total_bits] {0,1}
             x_in = x_q.cuda() if cuda else x_q
             prev = None
-            fpc  = model.features_per_cycle
+            fpc = model.features_per_cycle
             for i, layer in enumerate(model.module_list[:-1]):
                 chunks_here = model.cascade_chunks[i]
                 if chunks_here:
@@ -105,7 +105,7 @@ def test_layer_q_lut_path(
                     layer_in = prev
                 prev = layer.lut_forward(layer_in)
 
-            out   = model.module_list[-1].lut_forward(prev)
+            out = model.module_list[-1].lut_forward(prev)
             preds = out.argmax(dim=1).cpu()
             correct += (preds == y).sum().item()
             total   += x_uint8.size(0)
@@ -289,9 +289,9 @@ if __name__ == "__main__":
         default=False,
     )
 
-    args     = parser.parse_args()
+    args = parser.parse_args()
     defaults = configs[args.arch]
-    options  = vars(args)
+    options = vars(args)
     del options["arch"]
 
     config = {}
@@ -304,8 +304,10 @@ if __name__ == "__main__":
 
     os.makedirs(config["log_dir"], exist_ok=True)
 
-    use_layer_q  = config["use_layer_q"]
+    use_layer_q = config["use_layer_q"]
     hw_bandwidth = config["hw_bandwidth"]
+    dataset_mean = 0.1307
+    dataset_std = 0.3081
     if use_layer_q:
         fpc_configured = (
             config.get("features_per_cycle") or defaults.get("features_per_cycle", 112)
@@ -313,11 +315,11 @@ if __name__ == "__main__":
         if hw_bandwidth > fpc_configured * 8:
             raise ValueError(
                 f"--hw-bandwidth ({hw_bandwidth}) must be ≤ "
-                f"features_per_cyclex8 = {fpc_configured}x8 = {fpc_configured*8}"
+                f"features-per-cyclex8 = {fpc_configured}x8 = {fpc_configured*8}"
             )
         load_cpc = math.ceil(fpc_configured * 8 / hw_bandwidth)
         print(f"\n[Layer-Q] hw_bandwidth={hw_bandwidth}  "
-              f"features_per_cycle={fpc_configured}  LOAD_CPC={load_cpc}")
+              f"features-per-cycle={fpc_configured}  LOAD_CPC={load_cpc}")
 
     # Split up configuration options to be more understandable
     model_cfg = {k: config[k] for k in model_config if k in config}
@@ -331,7 +333,7 @@ if __name__ == "__main__":
         "mnist_data", download=False, train=False,
         transform=transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Normalize((dataset_mean,), (dataset_std,)),
         ]),
     )
     test_loader = DataLoader(
@@ -343,7 +345,7 @@ if __name__ == "__main__":
             "mnist_data", config["batch_size"], split="test"
         )
 
-    model_cfg["input_length"]  = 784
+    model_cfg["input_length"] = 784
     model_cfg["output_length"] = 10
     model_cfg["imask"] = torch.load(
         options_cfg["imask"],
@@ -404,8 +406,8 @@ if __name__ == "__main__":
         print("=" * 70)
         layer_q_truth_tables = compute_layer_q_truth_tables(
             lut_model,
-            dataset_mean=config["dataset_mean"],
-            dataset_std=config["dataset_std"],
+            dataset_mean=dataset_mean,
+            dataset_std=dataset_std,
         )
         print(f"   Computed truth tables for {len(layer_q_truth_tables)} chunks")
         for c, chunk in enumerate(layer_q_truth_tables):
@@ -420,8 +422,8 @@ if __name__ == "__main__":
             test_layer_q_lut_path(
                 lut_model, layer_q_truth_tables, test_loader_uint8,
                 cuda=options_cfg["cuda"],
-                dataset_mean=config["dataset_mean"],
-                dataset_std=config["dataset_std"],
+                dataset_mean=dataset_mean,
+                dataset_std=dataset_std,
             )
 
     log_dir = options_cfg["log_dir"]
@@ -469,13 +471,13 @@ if __name__ == "__main__":
         final_out_bits = int(lut_model.output_length * int(final_obw))
 
         top_verilog = generate_cascade_top_v2(
-            top_name          = "cascadelut",
-            features_per_cycle    = model_cfg["features_per_cycle"],
-            num_chunks        = num_chunks,
-            cascade_chunks    = lut_model.cascade_chunks,
+            top_name = "cascadelut",
+            features_per_cycle = model_cfg["features_per_cycle"],
+            num_chunks = num_chunks,
+            cascade_chunks = lut_model.cascade_chunks,
             layer_output_bits = layer_output_bits,
-            hw_bandwidth      = hw_bandwidth,
-            final_out_bits    = final_out_bits,
+            hw_bandwidth = hw_bandwidth,
+            final_out_bits = final_out_bits,
         )
         with open(f"{log_dir}/cascadelut.v", "w") as fh:
             fh.write(top_verilog)
@@ -502,8 +504,8 @@ if __name__ == "__main__":
             top_module_filename="cascadelut.v",
             hw_bandwidth=hw_bandwidth,
             num_chunks=num_chunks,
-            dataset_mean=config["dataset_mean"],
-            dataset_std=config["dataset_std"],
+            dataset_mean=dataset_mean,
+            dataset_std=dataset_std,
             logfile=None,
         )
     else:

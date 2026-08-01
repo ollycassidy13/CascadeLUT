@@ -31,8 +31,8 @@ def compute_layer_q_truth_tables(
     if not all_used:
         return []
     num_chunks = max(all_used) + 1
-    fpc        = model.features_per_cycle
-    imp        = model.importance_order
+    fpc = model.features_per_cycle
+    imp = model.importance_order
     if isinstance(imp, torch.Tensor):
         imp = imp.cpu().numpy()
 
@@ -51,32 +51,35 @@ def compute_layer_q_truth_tables(
 
     with torch.no_grad():
         for c in range(num_chunks):
-            bn_mod    = model.per_chunk_bn[c].eval()
-            bias_mod  = model.per_chunk_bias[c]
+            bn_mod = model.per_chunk_bn[c].eval()
+            bias_mod = model.per_chunk_bias[c]
             quant_mod = model.per_chunk_quant[c].eval()
 
-            start       = c * fpc
-            end         = min((c + 1) * fpc, model.input_length)
-            csz         = end - start
+            start = c * fpc
+            end = min((c + 1) * fpc, model.input_length)
+            csz = end - start
             global_idxs = [int(imp[start + j]) for j in range(csz)]
 
             x_batch = torch.zeros(256, csz)
             for j in range(csz):
-                g_j    = global_idxs[j]
+                g_j = global_idxs[j]
                 fmin_j = float(feature_min_arr[g_j])
                 fmax_j = float(feature_max_arr[g_j])
-                fr_j   = max(fmax_j - fmin_j, 1e-9)
+                fr_j = max(fmax_j - fmin_j, 1e-9)
                 x_batch[:, j] = u8 / 255.0 * fr_j + fmin_j
 
             if model.is_cuda:
                 x_batch = x_batch.cuda()
 
-            x_bn  = bn_mod(x_batch)
-            x_b   = bias_mod(x_bn)
+            x_bn = bn_mod(x_batch)
+            x_b = bias_mod(x_bn)
 
-            quant_mod.float_output()
+            was_bin = quant_mod.is_bin_output
+            quant_mod.bin_output()
             q_out = quant_mod(x_b)
             q_int = q_out.long().cpu()
+            if not was_bin:
+                quant_mod.float_output()
 
             chunk_truth = [
                 (global_idxs[j], q_int[:, j].tolist())
@@ -94,7 +97,7 @@ class LayerQLutSimulator:
         features_per_cycle: int,
         importance_order,
     ):
-        self.truth_tables       = truth_tables
+        self.truth_tables = truth_tables
         self.features_per_cycle = features_per_cycle
         self.imp = (
             importance_order.cpu().numpy()
@@ -110,11 +113,11 @@ class LayerQLutSimulator:
         x_np = x_uint8.cpu().numpy().astype(np.uint8)
         chunks_out = []
         for c, chunk_luts in enumerate(self._luts):
-            csz       = len(chunk_luts)
-            start     = c * self.features_per_cycle
+            csz = len(chunk_luts)
+            start = c * self.features_per_cycle
             feat_idxs = self.imp[start:start + csz].astype(int)
             chunk_raw = x_np[:, feat_idxs]
-            chunk_q   = np.stack(
+            chunk_q = np.stack(
                 [chunk_luts[j][chunk_raw[:, j]] for j in range(csz)],
                 axis=1,
             )
@@ -130,13 +133,13 @@ def _neuron_verilog(
     output_bits: int = 1,
 ) -> str:
     if output_bits == 1:
-        entries     = "".join(
+        entries = "".join(
             f"\t\t\t8'h{v:02x}: M1r = 1'b{truth_vec[v]};\n"
             for v in range(256)
         )
         default_val = "1'b0"
     else:
-        entries     = "".join(
+        entries = "".join(
             f"\t\t\t8'h{v:02x}: M1r = {output_bits}'d{truth_vec[v]};\n"
             for v in range(256)
         )
@@ -166,10 +169,10 @@ def generate_layer_q_verilog(
     dims: List[Tuple[int, int, int]] = []
 
     for c, chunk_truth in enumerate(truth_tables):
-        csz            = len(chunk_truth)
-        total_in_bits  = csz * 8
+        csz = len(chunk_truth)
+        total_in_bits = csz * 8
         total_out_bits = csz * output_bits
-        prefix         = f"layer_q_{c}"
+        prefix = f"layer_q_{c}"
 
         body = (
             f"module {prefix} "
@@ -178,11 +181,11 @@ def generate_layer_q_verilog(
         )
 
         for j, (_gidx, truth_vec) in enumerate(chunk_truth):
-            nname   = f"{prefix}_N{j}"
+            nname = f"{prefix}_N{j}"
             with open(f"{output_dir}/{nname}.v", "w") as fh:
                 fh.write(_neuron_verilog(nname, truth_vec, output_bits=output_bits))
-            in_msb  = j * 8 + 7
-            in_lsb  = j * 8
+            in_msb = j * 8 + 7
+            in_lsb = j * 8
             out_msb = j * output_bits + output_bits - 1
             out_lsb = j * output_bits
             body += (
@@ -213,9 +216,9 @@ def build_uint8_test_loader(
 ):
     X_train, Y_train, X_test, Y_test = load_dataset(dset_path)
 
-    X, Y       = (X_train, Y_train) if split == "train" else (X_test, Y_test)
+    X, Y = (X_train, Y_train) if split == "train" else (X_test, Y_test)
     frange_arr = np.maximum(feature_max_arr - feature_min_arr, 1e-9)
-    X_uint8    = torch.from_numpy(
+    X_uint8 = torch.from_numpy(
         (((X - feature_min_arr) / frange_arr) * 255.0)
         .clip(0, 255)
         .astype(np.uint8)
@@ -230,8 +233,8 @@ def _float_to_uint8(
     feature_min_arr: np.ndarray,
     feature_max_arr: np.ndarray,
 ) -> torch.Tensor:
-    fmin   = torch.from_numpy(feature_min_arr).float()
-    fmax   = torch.from_numpy(feature_max_arr).float()
+    fmin = torch.from_numpy(feature_min_arr).float()
+    fmax = torch.from_numpy(feature_max_arr).float()
     frange = torch.clamp(fmax - fmin, min=1e-9)
     return ((x - fmin) / frange * 255.0).clamp(0.0, 255.0).round().long()
 
@@ -243,23 +246,23 @@ def _build_raw_words(
     importance_order: torch.Tensor,
     hw_bandwidth: int,
 ) -> list:
-    fpc   = features_per_cycle
+    fpc = features_per_cycle
     start = chunk_idx * fpc
-    end   = min((chunk_idx + 1) * fpc, len(importance_order))
-    csz   = end - start
+    end = min((chunk_idx + 1) * fpc, len(importance_order))
+    csz = end - start
 
-    imp    = importance_order.cpu().numpy().astype(int)
-    x_np   = x_uint8_sample.cpu().numpy()
+    imp = importance_order.cpu().numpy().astype(int)
+    x_np = x_uint8_sample.cpu().numpy()
     packed = 0
     for j in range(csz):
         packed |= (int(x_np[imp[start + j]]) & 0xFF) << (j * 8)
 
     total_bits = csz * 8
-    load_cpc   = math.ceil(total_bits / hw_bandwidth)
+    load_cpc = math.ceil(total_bits / hw_bandwidth)
     words = []
     for k in range(load_cpc):
-        lo   = k * hw_bandwidth
-        hi   = min(lo + hw_bandwidth, total_bits)
+        lo = k * hw_bandwidth
+        hi = min(lo + hw_bandwidth, total_bits)
         mask = (1 << (hi - lo)) - 1
         words.append((packed >> lo) & mask)
     return words
@@ -267,15 +270,15 @@ def _build_raw_words(
 
 def verilog_forward_layer_q_v2(self, x: torch.Tensor) -> torch.Tensor:
     _, out_bw = self.module_list[-1].output_quant.get_scale_factor_bits(self.is_cuda)
-    out_bw    = int(out_bw)
+    out_bw = int(out_bw)
     total_out = self.output_length * out_bw
     out_quant = self.module_list[-1].output_quant
 
     hw_bw = self.hw_bandwidth
-    fpc   = self.features_per_cycle
+    fpc = self.features_per_cycle
 
     self.eval()
-    y       = torch.zeros(x.shape[0], self.output_length)
+    y = torch.zeros(x.shape[0], self.output_length)
     x_uint8 = _float_to_uint8(x.cpu(), self.feature_min_arr, self.feature_max_arr)
 
     lq_sim = getattr(self, 'layer_q_simulator', None)
@@ -283,7 +286,7 @@ def verilog_forward_layer_q_v2(self, x: torch.Tensor) -> torch.Tensor:
     mismatches = 0
 
     for sample_idx in range(x.shape[0]):
-        x_i  = x[sample_idx : sample_idx + 1]
+        x_i = x[sample_idx : sample_idx + 1]
         x_u8 = x_uint8[sample_idx]
 
         with torch.no_grad():
@@ -314,7 +317,7 @@ def verilog_forward_layer_q_v2(self, x: torch.Tensor) -> torch.Tensor:
         )
         out_quant.float_output()
 
-        self.dut.io.rst       = 1
+        self.dut.io.rst = 1
         self.dut["raw_input"] = 0
         self.dut.io.clk = 1
         self.dut.io.clk = 0
@@ -327,7 +330,7 @@ def verilog_forward_layer_q_v2(self, x: torch.Tensor) -> torch.Tensor:
                 self.dut.io.clk = 1
                 self.dut.io.clk = 0
 
-        res    = self.dut["output_data"]
+        res = self.dut["output_data"]
         result = f"{res:0{total_out}b}"
 
         if result != expected:
@@ -365,7 +368,7 @@ def verilog_inference_layer_q(
     layer_q_truth_tables=None,
     logfile=None,
 ):
-    self.verilog_dir         = os.path.realpath(verilog_dir)
+    self.verilog_dir = os.path.realpath(verilog_dir)
     self.top_module_filename = top_module_filename
     self.dut = PyVerilator.build(
         f"{self.verilog_dir}/{self.top_module_filename}",
@@ -373,18 +376,18 @@ def verilog_inference_layer_q(
         build_dir=f"{self.verilog_dir}/verilator",
     )
     self.is_verilog_inference = True
-    self.logfile              = logfile
-    self.hw_bandwidth         = hw_bandwidth
-    self.num_chunks           = num_chunks
-    self.feature_min_arr      = feature_min_arr if feature_min_arr is not None else np.zeros(1)
-    self.feature_max_arr      = feature_max_arr if feature_max_arr is not None else np.ones(1)
-    self.layer_q_simulator    = (
+    self.logfile = logfile
+    self.hw_bandwidth = hw_bandwidth
+    self.num_chunks = num_chunks
+    self.feature_min_arr = feature_min_arr if feature_min_arr is not None else np.zeros(1)
+    self.feature_max_arr = feature_max_arr if feature_max_arr is not None else np.ones(1)
+    self.layer_q_simulator = (
         LayerQLutSimulator(layer_q_truth_tables, self.features_per_cycle, self.importance_order)
         if layer_q_truth_tables is not None else None
     )
 
-    fpc       = self.features_per_cycle
-    load_cpc  = math.ceil(fpc * 8 / hw_bandwidth)
+    fpc = self.features_per_cycle
+    load_cpc = math.ceil(fpc * 8 / hw_bandwidth)
     total_cyc = num_chunks * load_cpc
 
     self.verilog_forward = types.MethodType(verilog_forward_layer_q_v2, self)

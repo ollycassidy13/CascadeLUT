@@ -50,7 +50,7 @@ python neq2lut.py --arch toycar \
                   --add-registers \
                   --device 1 \
                   --imask ./test_cascade_demo/imask.pth \
-                  --cuda
+                  --cuda \
 				  --hw_bandwidth 112
 ```
 
@@ -68,8 +68,8 @@ python neq2lut.py --arch toycar \
                   --add-registers \
                   --device 1 \
                   --imask ./test_cascade_demo/imask.pth \
-                  --cuda
-				  --hw_bandwidth 112
+                  --cuda \
+				  --hw_bandwidth 112 \
 				  --use_layer_q
 ```
 

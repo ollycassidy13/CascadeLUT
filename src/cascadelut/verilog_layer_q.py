@@ -37,13 +37,13 @@ def generate_cascade_top_v2(
     final_out_bits: int,
     layer_q_output_bits: List[int] = None,
 ) -> str:
-    fpc_bits     = features_per_cycle * 8
-    load_cpc     = math.ceil(fpc_bits / hw_bandwidth)
-    raw_buf_bits = (load_cpc - 1) * hw_bandwidth   # bits stored (last word is live)
-    total_cyc    = num_chunks * load_cpc
-    cnt_w        = _clog2(total_cyc + 1)
+    fpc_bits = features_per_cycle * 8
+    load_cpc = math.ceil(fpc_bits / hw_bandwidth)
+    raw_buf_bits = (load_cpc - 1) * hw_bandwidth
+    total_cyc = num_chunks * load_cpc
+    cnt_w = _clog2(total_cyc + 1)
 
-    if layer_q_output_bits is None:  # default: 1-bit binary per feature
+    if layer_q_output_bits is None:  # default: 1-bit per feature
         layer_q_output_bits = [features_per_cycle] * num_chunks
 
     num_layers = len(layer_output_bits)
@@ -58,10 +58,10 @@ def generate_cascade_top_v2(
 
     load_cases = ""
     for c in range(num_chunks):
-        for k in range(load_cpc - 1):          # LOAD_CPC-1 stored words
+        for k in range(load_cpc - 1):
             cycle = c * load_cpc + k
-            lo    = k * hw_bandwidth
-            hi    = lo + hw_bandwidth - 1
+            lo = k * hw_bandwidth
+            hi = lo + hw_bandwidth - 1
             load_cases += (
                 f"                {cycle}: raw_buf_{c}[{hi}:{lo}] <= raw_input;\n"
             )
@@ -75,56 +75,54 @@ def generate_cascade_top_v2(
         for c in range(num_chunks)
     )
 
-    we_decls     = []
+    we_decls = []
     we_rst_stmts = []
-    we_captures  = []   # (we_cycle, reg_name, rhs)
+    we_captures = []
 
     layer_wire_decls = []
     layer_inst_lines = []
 
     for i in range(num_hidden):
-        out_bits    = layer_output_bits[i]
+        out_bits = layer_output_bits[i]
         chunks_here = cascade_chunks[i] if i < len(cascade_chunks) else []
 
         layer_wire_decls.append(f"wire [{out_bits-1}:0] layer_out_{i};")
 
         if not chunks_here:
-            # Non-cascade: purely combinatorial, no register
+            # Non-cascade: no register
             layer_inst_lines.append(
                 f"layer{i} layer{i}_inst (.M0(layer_out_{i-1}), .M1(layer_out_{i}));"
             )
         else:
             # Cascade injection: WE register fires on the last load cycle of
             # the highest chunk index used by this layer.
-            c_max    = max(chunks_here)
+            c_max = max(chunks_here)
             we_cycle = (c_max + 1) * load_cpc - 1   # last cycle of chunk c_max
 
             if i == 0:
                 if len(chunks_here) == 1:
                     we_width = layer_q_output_bits[chunks_here[0]]
-                    we_rhs   = f"lq_out_{chunks_here[0]}"
+                    we_rhs = f"lq_out_{chunks_here[0]}"
                 else:
                     we_width = sum(layer_q_output_bits[c] for c in chunks_here)
-                    parts    = ", ".join(f"lq_out_{c}" for c in reversed(chunks_here))
-                    we_rhs   = "{" + parts + "}"
+                    parts = ", ".join(f"lq_out_{c}" for c in reversed(chunks_here))
+                    we_rhs = "{" + parts + "}"
             else:
                 prev_bits = layer_output_bits[i - 1]
                 if len(chunks_here) == 1:
                     we_width = prev_bits + layer_q_output_bits[chunks_here[0]]
-                    # Python cat order: [prev, chunk] → prev at low bits, chunk at high bits.
-                    # Verilog {A, B}: B is at low bits. So layer_out must be last.
-                    we_rhs   = (
+                    # Python cat order: [prev, chunk] -> prev at low bits, chunk at high bits
+                    # Verilog {A, B}: B is at low bits
+                    we_rhs = (
                         "{" + f"lq_out_{chunks_here[0]}, layer_out_{i-1}" + "}"
                     )
                 else:
                     chunk_bits = sum(layer_q_output_bits[c] for c in chunks_here)
                     we_width = prev_bits + chunk_bits
-                    # Python cat order: [prev, chunk[0], chunk[1], ...]
-                    # In {X_n,..,X_0}: X_0 is at lowest bits. layer_out must be last.
                     chunk_part = ", ".join(
                         f"lq_out_{c}" for c in reversed(chunks_here)
                     )
-                    we_rhs   = "{" + f"{chunk_part}, layer_out_{i-1}" + "}"
+                    we_rhs = "{" + f"{chunk_part}, layer_out_{i-1}" + "}"
 
             reg_name = f"layer{i}_in_reg"
             we_decls.append(f"reg [{we_width-1}:0] {reg_name};")
@@ -142,11 +140,11 @@ def generate_cascade_top_v2(
         f" (.M0(layer_out_{num_hidden-1}), .M1(layer_out_{final_idx}));"
     )
 
-    sep4  = "\n    "
+    sep4 = "\n    "
     sep12 = "\n            "
 
-    we_decl_str  = sep4.join(we_decls)       if we_decls      else ""
-    we_rst_str   = sep12.join(we_rst_stmts)  if we_rst_stmts  else ""
+    we_decl_str = sep4.join(we_decls)       if we_decls      else ""
+    we_rst_str = sep12.join(we_rst_stmts)  if we_rst_stmts  else ""
 
     we_body = ""
     for we_cycle, reg_name, rhs in we_captures:

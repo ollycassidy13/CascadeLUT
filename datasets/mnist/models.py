@@ -33,7 +33,6 @@ from cascadelut.quant import (
     LearnablePerFeatureMultiBitActivation,
     CascadeCompositeInputQuant,
     patch_cascade_layer,
-    ThresholdTemperatureScheduler,
 )
 from cascadelut.nn import (
     SparseLinearNeq,
@@ -326,9 +325,15 @@ class MnistCascadeModel(nn.Module):
         quant = self.per_chunk_quant[chunk_idx]
         raw = self._apply_chunk_transforms(x_sample, chunk_idx)
 
+        # Restore the previous mode rather than forcing float: under lut_inference
+        # these chunk quantisers are the cascade layers' input_quant, and
+        # forward_incremental feeds their output straight into table_lookup,
+        # which only accepts bin codes.
+        was_bin = quant.is_bin_output
         quant.bin_output()
         bin_vals = quant(raw)[0]
-        quant.float_output()
+        if not was_bin:
+            quant.float_output()
 
         feat_bin_strs = [
             quant.get_bin_str_from_int(v, is_cuda=self.is_cuda) for v in bin_vals
@@ -336,16 +341,16 @@ class MnistCascadeModel(nn.Module):
         return reduce(lambda a, b: a + b, feat_bin_strs[::-1])
 
     def verilog_forward(self, x):
-        _, input_bitwidth  = self.module_list[0].input_quant.get_scale_factor_bits(self.is_cuda)
+        _, input_bitwidth = self.module_list[0].input_quant.get_scale_factor_bits(self.is_cuda)
         _, output_bitwidth = self.module_list[-1].output_quant.get_scale_factor_bits(self.is_cuda)
-        input_bitwidth  = int(input_bitwidth)
+        input_bitwidth = int(input_bitwidth)
         output_bitwidth = int(output_bitwidth)
 
-        chunk_bits        = self.features_per_cycle * input_bitwidth
+        chunk_bits = self.features_per_cycle * input_bitwidth
         total_output_bits = self.output_length * output_bitwidth
 
         all_used_chunks = sorted(set(c for layer in self.cascade_chunks for c in layer))
-        num_chunks      = max(all_used_chunks) + 1
+        num_chunks = max(all_used_chunks) + 1
 
         output_quant = self.module_list[-1].output_quant
         self.eval()
@@ -358,13 +363,15 @@ class MnistCascadeModel(nn.Module):
             with torch.no_grad():
                 y_ref = self.forward_incremental(x_i, cycle=len(self.hidden_layers) - 1)[0]
 
+            oq_was_bin = output_quant.is_bin_output
             output_quant.bin_output()
             ys_bin = [
                 output_quant.get_bin_str_from_int(v, is_cuda=self.is_cuda)
                 for v in y_ref
             ]
             ysc_i = reduce(lambda a, b: a + b, ys_bin[::-1])
-            output_quant.float_output()
+            if not oq_was_bin:
+                output_quant.float_output()
 
             chunk_bin = {}
             for c in all_used_chunks:
@@ -382,8 +389,8 @@ class MnistCascadeModel(nn.Module):
                 self.dut.io.clk = 1
                 self.dut.io.clk = 0
 
-            res      = self.dut["output_data"]
-            result   = f"{res:0{total_output_bits}b}"
+            res = self.dut["output_data"]
+            result = f"{res:0{total_output_bits}b}"
             expected = f"{int(ysc_i, 2):0{total_output_bits}b}"
 
             if result != expected:

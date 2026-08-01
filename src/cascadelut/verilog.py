@@ -93,6 +93,19 @@ def generate_neuron_connection_verilog(input_indices, input_bitwidth):
                 connection_string += ", "
     return connection_string
 
+def generate_neuron_connection_verilog_composite(input_indices, composite_quant):
+    connection_string = ""
+    num_indices = len(input_indices)
+    for i in range(num_indices):
+        index = int(input_indices[i])
+        offset = composite_quant.get_bit_offset_for_feature(index)
+        bits = composite_quant.get_bits_for_feature(index)
+        for b in reversed(range(bits)):
+            connection_string += f"M0[{offset + b}]"
+            if not (i == num_indices - 1 and b == 0):
+                connection_string += ", "
+    return connection_string
+
 def cascade_gen_layer_verilog(self, module_prefix, directory, generate_bench=True):
     composite = self.input_quant
     _, output_bitwidth = self.output_quant.get_scale_factor_bits(self.cuda)
@@ -217,15 +230,13 @@ def generate_cascade_top_module(
     all_used = sorted(set(c for layer in cascade_chunks for c in layer))
     num_chunks = max(all_used) + 1
 
-    total_cyc    = num_chunks * load_cpc
+    total_cyc = num_chunks * load_cpc
     raw_buf_bits = (load_cpc - 1) * hw_bandwidth  # 0 when LOAD_CPC == 1
 
     cnt_w = max(1, (total_cyc - 1).bit_length())
     if total_cyc > 1:
         cnt_w = max(cnt_w, 2)
 
-    # chunk_c_reg: only needed for layer 0 (no prev output to co-register) and for
-    # non-max chunks whose WE fired earlier and must be held until c_max WE cycle.
     chunks_with_own_reg = set()
     layer_pipregs = {}
 
@@ -237,20 +248,18 @@ def generate_cascade_top_module(
             for c in chunks_here:
                 chunks_with_own_reg.add(c)
         else:
-            c_max    = max(chunks_here)
-            we_cyc   = (c_max + 1) * load_cpc - 1
+            c_max = max(chunks_here)
+            we_cyc = (c_max + 1) * load_cpc - 1
             prev_bits = layer_output_bits[i - 1]
-            in_width  = prev_bits + chunk_bits * len(chunks_here)
+            in_width = prev_bits + chunk_bits * len(chunks_here)
 
-            # {highest_chunk, ..., lowest_chunk_reg, layer_out_{i-1}}:
-            # MSBs = chunk features, LSBs = prev layer — matches torch.cat([prev, chunks])
             chunk_exprs = []
             for c in reversed(sorted(chunks_here)):
                 if c == c_max:
                     live = f"{{input_chunk, raw_buf_{c}}}" if load_cpc > 1 else "input_chunk"
                     chunk_exprs.append(live)
                 else:
-                    chunks_with_own_reg.add(c)   # committed earlier, safe to read
+                    chunks_with_own_reg.add(c)
                     chunk_exprs.append(f"chunk_{c}_reg")
 
             rhs = "{" + ", ".join(chunk_exprs) + f", layer_out_{i-1}" + "}"
@@ -278,13 +287,13 @@ def generate_cascade_top_module(
         if load_cpc > 1:
             for k in range(load_cpc - 1):
                 cyc = c * load_cpc + k
-                lo  = k * hw_bandwidth
-                hi  = lo + hw_bandwidth - 1
+                lo = k * hw_bandwidth
+                hi = lo + hw_bandwidth - 1
                 cycle_actions[cyc].append(f"raw_buf_{c}[{hi}:{lo}] <= input_chunk;")
 
     for c in chunks_with_own_reg:
         we_cyc = (c + 1) * load_cpc - 1
-        live   = f"{{input_chunk, raw_buf_{c}}}" if load_cpc > 1 else "input_chunk"
+        live = f"{{input_chunk, raw_buf_{c}}}" if load_cpc > 1 else "input_chunk"
         cycle_actions[we_cyc].append(f"chunk_{c}_reg <= {live};")
 
     for i, info in sorted(layer_pipregs.items()):
@@ -308,7 +317,7 @@ def generate_cascade_top_module(
     layer_inst_lines = []
 
     for i in range(num_hidden):
-        out_bits    = layer_output_bits[i]
+        out_bits = layer_output_bits[i]
         chunks_here = cascade_chunks[i] if i < len(cascade_chunks) else []
         layer_wire_decls.append(f"wire [{out_bits-1}:0] layer_out_{i};")
 
@@ -368,14 +377,14 @@ module {top_name} (
 endmodule
 """
     return template.format(
-        top_name         = top_name,
-        hw_bw_1          = hw_bandwidth - 1,
+        top_name = top_name,
+        hw_bw_1 = hw_bandwidth - 1,
         final_out_bits_1 = final_out_bits - 1,
-        final_idx        = final_idx,
-        reg_decls        = "\n    ".join(reg_decls),
+        final_idx = final_idx,
+        reg_decls = "\n    ".join(reg_decls),
         layer_wire_decls = "\n    ".join(layer_wire_decls),
         layer_inst_lines = "\n    ".join(layer_inst_lines),
-        rst_stmts        = "\n            ".join(rst_stmts),
-        wrap_expr        = wrap_expr,
-        case_body        = "\n".join(case_lines),
+        rst_stmts = "\n            ".join(rst_stmts),
+        wrap_expr = wrap_expr,
+        case_body = "\n".join(case_lines),
     )

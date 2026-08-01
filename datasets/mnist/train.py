@@ -31,8 +31,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from torchvision import datasets, transforms
-from models import MnistCascadeModel, ThresholdTemperatureScheduler, _parse_cascade_chunks
-from cascadelut.quant import LearnablePerFeatureMultiBitActivation
+from models import MnistCascadeModel, _parse_cascade_chunks
+from cascadelut.quant import LearnablePerFeatureMultiBitActivation, ThresholdTemperatureScheduler
 
 configs = {
     "hdr-5l-0.1": {

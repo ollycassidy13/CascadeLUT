@@ -80,11 +80,11 @@ def test_layer_q_lut_path(
         offset += len(chunk_truth)
 
     correct = 0
-    total   = 0
+    total = 0
 
     with torch.no_grad():
         for x_uint8, y in test_loader_uint8:
-            x_q  = lut_sim(x_uint8)
+            x_q = lut_sim(x_uint8)
             x_in = x_q.cuda() if cuda else x_q
             prev = None
             for i, layer in enumerate(model.module_list[:-1]):
@@ -105,7 +105,7 @@ def test_layer_q_lut_path(
                     layer_in = prev
                 prev = layer.lut_forward(layer_in)
 
-            out   = model.module_list[-1].lut_forward(prev)
+            out = model.module_list[-1].lut_forward(prev)
             preds = out.argmax(dim=1).cpu()
             correct += (preds == y).sum().item()
             total   += x_uint8.size(0)
@@ -289,9 +289,9 @@ if __name__ == "__main__":
         default=False,
     )
 
-    args     = parser.parse_args()
+    args = parser.parse_args()
     defaults = configs[args.arch]
-    options  = vars(args)
+    options = vars(args)
     del options["arch"]
 
     config = {}
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
     os.makedirs(config["log_dir"], exist_ok=True)
 
-    use_layer_q  = config["use_layer_q"]
+    use_layer_q = config["use_layer_q"]
     hw_bandwidth = config["hw_bandwidth"]
     input_bitwidth = config.get("input_bitwidth", 1)
     
@@ -502,13 +502,13 @@ if __name__ == "__main__":
         final_out_bits = int(lut_model.output_length * int(final_obw))
 
         top_verilog = generate_cascade_top_v2(
-            top_name          = "cascadelut",
-            features_per_cycle    = model_cfg["features_per_cycle"],
-            num_chunks        = num_chunks,
-            cascade_chunks    = lut_model.cascade_chunks,
+            top_name = "cascadelut",
+            features_per_cycle = model_cfg["features_per_cycle"],
+            num_chunks = num_chunks,
+            cascade_chunks = lut_model.cascade_chunks,
             layer_output_bits = layer_output_bits,
-            hw_bandwidth      = hw_bandwidth,
-            final_out_bits    = final_out_bits,
+            hw_bandwidth = hw_bandwidth,
+            final_out_bits = final_out_bits,
             layer_q_output_bits = layer_q_output_bits,
         )
         with open(f"{log_dir}/cascadelut.v", "w") as fh:
@@ -542,7 +542,6 @@ if __name__ == "__main__":
             logfile=None,
         )
     else:
-        print("verilog inf")
         lut_model.verilog_inference(
             log_dir,
             "cascadelut.v",
@@ -553,7 +552,7 @@ if __name__ == "__main__":
     verilog_accuracy = test(lut_model, test_loader, cuda=options_cfg["cuda"])
     print(f"   Verilog-based accuracy: {verilog_accuracy:.6f}")
 
-    fpga_part     = "xc7z045ffg900-2"
+    fpga_part = "xc7z045ffg900-2"
     clk_period_ns = 5.0
     print("\n" + "=" * 70)
     print(f"7. In-context synthesis  (part={fpga_part}, clk={clk_period_ns} ns)")

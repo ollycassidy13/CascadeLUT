@@ -30,8 +30,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from models import ToyCarCascadeModel, ThresholdTemperatureScheduler, _parse_cascade_chunks
-from cascadelut.quant import LearnablePerFeatureMultiBitActivation
+from models import ToyCarCascadeModel, _parse_cascade_chunks
+from cascadelut.quant import LearnablePerFeatureMultiBitActivation, ThresholdTemperatureScheduler
 
 from dataset import load_dataset
 
