@@ -1,13 +1,13 @@
 # CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs
 
 [![FPL 2026](https://img.shields.io/badge/FPL-2026-blue)](https://2026.fpl.org/)
-[![arXiv](https://img.shields.io/badge/arxiv-2310.00000-red)](https://arxiv.org/abs/2310.00000)
+[![arXiv](https://img.shields.io/badge/arxiv-2608.00720-red)](https://arxiv.org/abs/2608.00720)
 
 CascadeLUT is an information-structured inference framework for bandwidth-constrained FPGA deployments. Instead of buffering the full input before computation, features are partitioned into ordered subsets and predictions are progressively refined as subsets arrive. The cascade structure statically controls which layers consume incoming features, enabling deterministic streaming inference without runtime branching.
 
 By co-designing feature scheduling and hardware dataflow, CascadeLUT reduces data movement while maintaining accuracy. It builds on the [NeuraLUT-Assemble](https://github.com/MartaAndronic/NeuraLUT) backbone, a derivative work based on [LogicNets](https://github.com/Xilinx/logicnets) (Apache License 2.0).
 
-> This work is part of a publication at FPL 2026: O. Cassidy and M. Andronic and G. A. Constantinides, "CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs," 2026 36th International Conference on Field-Programmable Logic and Applications (FPL), Ghent, Belgium, 2026, pp. -, doi: -.
+> This work is part of a publication at FPL 2026: O. Cassidy and M. Andronic and G. A. Constantinides, "CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs," 2026 36th International Conference on Field-Programmable Logic and Applications (FPL), Ghent, Belgium, 2026.
 
 <p align="left">
   <img src="example-diagram-1.png" width="600" alt="CascadeLUT Topology: input subsets S1, S2, S3 are injected at successive pipeline stages, with L-LUT layers propagating hidden activations between stages.">
@@ -95,9 +95,11 @@ We provide examples to get started on one image dataset and one audio dataset:
 * Adds a Layer-Q pre-quantisation frontend: per-feature 8-bit→1-bit LUTs fold normalisation and batch norm into a single truth table, allowing raw uint8 inputs at the hardware port.
 * Supports configurable hardware bandwidth (`hw_bandwidth`) to handle narrow I/O ports with multi-cycle subset loading (LOAD_CPC > 1) without extra drain cycles (live-last-word protocol).
 * Extends truth table generation to handle composite input quantisers (`CascadeCompositeInputQuant`) with mixed hidden/subset feature bitwidths.
-* Adds `generate_cascade_top_module` and `generate_cascade_top_with_buffering` for Verilog top-level generation with pipeline registers at cascade injection points.
+* Adds `generate_cascade_top_module` for Verilog top-level generation with pipeline registers at cascade injection points.
 * Introduces `LearnablePerFeatureMultiBitActivation` for k-bit per-feature learned quantisation with strict threshold ordering via cumulative-softplus.
 * Adds `ThresholdTemperatureScheduler` for cosine-annealed temperature control across all learnable threshold modules.
+
+>NOTE: The training flow in this repository improves over the original paper. We set $S_i$ to be 1 for all $i$, we use a sigmoid in place of the clipped linear surrogate and we use a cosine annealing schedule for the temperature of the threshold modules. These changes improve the training stability, and hopefully the reusability of the paper.
 
 ## Citation
 

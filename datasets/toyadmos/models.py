@@ -308,21 +308,15 @@ class ToyCarCascadeModel(nn.Module):
         self.is_verilog_inference = False
 
     def _get_chunk_bitwidth(self):
-        """Return (scale, bitwidth) for a single chunk feature using layer0's input_quant."""
         return self.module_list[0].input_quant.get_scale_factor_bits(self.is_cuda)
 
     def _quantize_chunk_to_bin_str(self, x_sample, chunk_idx):
-        """Pack one chunk into LSB-first binary string for Verilog: {feat[N-1],...,feat[0]}."""
         _, input_bitwidth = self._get_chunk_bitwidth()
         input_bitwidth = int(input_bitwidth)
 
         quant = self.per_chunk_quant[chunk_idx]
         raw = self._apply_chunk_transforms(x_sample, chunk_idx)
-
-        # Restore the previous mode rather than forcing float: under lut_inference
-        # these chunk quantisers are the cascade layers' input_quant, and
-        # forward_incremental feeds their output straight into table_lookup,
-        # which only accepts bin codes.
+        
         was_bin = quant.is_bin_output
         quant.bin_output()
         bin_vals = quant(raw)[0]
@@ -390,7 +384,6 @@ class ToyCarCascadeModel(nn.Module):
                     self.dut.io.clk = 1
                     self.dut.io.clk = 0
 
-            # Output is combinatorial off chunk_c_reg; no pipeline drain needed.
             res = self.dut["output_data"]
             result = f"{res:0{total_output_bits}b}"
             expected = f"{int(ysc_i, 2):0{total_output_bits}b}"

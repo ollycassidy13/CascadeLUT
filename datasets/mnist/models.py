@@ -314,21 +314,15 @@ class MnistCascadeModel(nn.Module):
         self.is_verilog_inference = False
 
     def _get_chunk_bitwidth(self):
-        """Return (scale, bitwidth) for a single chunk feature using layer0's input_quant."""
         return self.module_list[0].input_quant.get_scale_factor_bits(self.is_cuda)
 
     def _quantize_chunk_to_bin_str(self, x_sample, chunk_idx):
-        """Pack one chunk into LSB-first binary string for Verilog: {feat[N-1],...,feat[0]}."""
         _, input_bitwidth = self._get_chunk_bitwidth()
         input_bitwidth = int(input_bitwidth)
 
         quant = self.per_chunk_quant[chunk_idx]
         raw = self._apply_chunk_transforms(x_sample, chunk_idx)
 
-        # Restore the previous mode rather than forcing float: under lut_inference
-        # these chunk quantisers are the cascade layers' input_quant, and
-        # forward_incremental feeds their output straight into table_lookup,
-        # which only accepts bin codes.
         was_bin = quant.is_bin_output
         quant.bin_output()
         bin_vals = quant(raw)[0]
@@ -433,7 +427,6 @@ class MnistCascadeModel(nn.Module):
         return x[:, idx]
 
     def _apply_chunk_transforms(self, x, chunk_idx: int):
-        """Apply dropout → BN → bias for a given chunk index, return raw float chunk."""
         chunk = self._get_chunk(x, chunk_idx)
         if self.is_cuda:
             chunk = chunk.cuda()
