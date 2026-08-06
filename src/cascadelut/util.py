@@ -1,6 +1,6 @@
-#  This file is part of NeuraLUT.
+#  This file is part of CascadeLUT.
 #
-#  NeuraLUT is a derivative work based on LogicNets,
+#  CascadeLUT is a derivative work based on LogicNets,
 #  which is licensed under the Apache License 2.0.
 
 #  Copyright (C) 2021 Xilinx, Inc

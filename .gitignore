@@ -1,6 +1,6 @@
-#  This file is part of NeuraLUT.
+#  This file is part of CascadeLUT.
 #
-#  NeuraLUT is a derivative work based on LogicNets,
+#  CascadeLUT is a derivative work based on LogicNets,
 #  which is licensed under the Apache License 2.0.
 
 #  Copyright (C) 2021 Xilinx, Inc
@@ -78,3 +78,20 @@ datasets/jet_substructure/wandb
 datasets/mnist/wandb
 
 datasets/jet_substructure/data/*
+
+datasets/fashionmnist/data/*
+datasets/fashionmnist/wandb
+datasets/fashionmnist/__pycache__
+datasets/fashionmnist/test*
+
+datasets/jet_substructure1
+
+datasets/kws/data/*
+datasets/kws/wandb
+datasets/kws/__pycache__
+datasets/kws/test*
+
+datasets/toyadmos/data/*
+datasets/toyadmos/wandb
+datasets/toyadmos/__pycache__
+datasets/toyadmos/test*
