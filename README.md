@@ -1,13 +1,14 @@
 # CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs
 
-[![FPL 2026](https://img.shields.io/badge/FPL-2026-blue)](https://2026.fpl.org/)
+[![FPL 2026](https://img.shields.io/badge/FPL-2026-blue)](https://ieeexplore.ieee.org/document/11754193)
 [![arXiv](https://img.shields.io/badge/arxiv-2608.00720-red)](https://arxiv.org/abs/2608.00720)
+[![DOI](https://img.shields.io/badge/DOI-10.23919%2FFPLCPS00026.2026.00028-green)](https://doi.org/10.23919/FPLCPS00026.2026.00028)
 
 CascadeLUT is an information-structured inference framework for bandwidth-constrained FPGA deployments. Instead of buffering the full input before computation, features are partitioned into ordered subsets and predictions are progressively refined as subsets arrive. The cascade structure statically controls which layers consume incoming features, enabling deterministic streaming inference without runtime branching.
 
 By co-designing feature scheduling and hardware dataflow, CascadeLUT reduces data movement while maintaining accuracy. It builds on the [NeuraLUT-Assemble](https://github.com/MartaAndronic/NeuraLUT) backbone, a derivative work based on [LogicNets](https://github.com/Xilinx/logicnets) (Apache License 2.0).
 
-> This work is part of a publication at FPL 2026: O. Cassidy and M. Andronic and G. A. Constantinides, "CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs," 2026 36th International Conference on Field-Programmable Logic and Applications (FPL), Ghent, Belgium, 2026.
+> This work is part of a publication at FPL 2026: O. Cassidy and M. Andronic and G. A. Constantinides, "CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs," 2026 36th International Conference on Field-Programmable Logic and Applications (FPL), pages 116-121, Ghent, Belgium, 2026.
 
 <p align="left">
   <img src="example-diagram-1.png" width="600" alt="CascadeLUT Topology: input subsets S1, S2, S3 are injected at successive pipeline stages, with L-LUT layers propagating hidden activations between stages.">
@@ -107,11 +108,12 @@ If CascadeLUT contributes to your research, please cite:
 
 ```bibtex
 @inproceedings{cassidy2026cascadelut,
-    author    = {Cassidy, Oliver and Andronic, Marta and Constantinides, George A.},
-    title     = {{CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs}},
-    booktitle = {2026 36th International Conference on Field-Programmable Logic and Applications (FPL)},
-    publisher = {IEEE},
-    year      = {2026}
+  author={Cassidy, Oliver and Andronic, Marta and Constantinides, George A.},
+  booktitle={2026 36th International Conference on Field-Programmable Logic and Applications (FPL)}, 
+  title={CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs}, 
+  year={2026},
+  pages={116-121},
+  doi={10.23919/FPLCPS00026.2026.00028}
 }
 ```
 

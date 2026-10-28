@@ -80,11 +80,12 @@ If CascadeLUT contributes to your research, please cite:
 
 ```bibtex
 @inproceedings{cassidy2026cascadelut,
-    author    = {Cassidy, Oliver and Andronic, Marta and Constantinides, George A.},
-    title     = {{CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs}},
-    booktitle = {2026 36th International Conference on Field-Programmable Logic and Applications (FPL)},
-    publisher = {IEEE},
-    year      = {2026}
+  author={Cassidy, Oliver and Andronic, Marta and Constantinides, George A.},
+  booktitle={2026 36th International Conference on Field-Programmable Logic and Applications (FPL)}, 
+  title={CascadeLUT: Information-Ordered Streaming Inference for Bandwidth-Constrained FPGAs}, 
+  year={2026},
+  pages={116-121},
+  doi={10.23919/FPLCPS00026.2026.00028}
 }
 ```
 
